@@ -90,17 +90,18 @@ struct ControlOutput {
     double TWR;         // Thrust-to-weight ratio
     double delta;       // Gimbal angle [rad]
     bool valid;         // Output validity flag
+    bool saturated;     // Gimbal saturation flag
     
-    constexpr ControlOutput() : TWR(1.0), delta(0.0), valid(false) {}
-    constexpr ControlOutput(double twr, double d, bool v = true) 
-        : TWR(twr), delta(d), valid(v) {}
+    constexpr ControlOutput() : TWR(1.0), delta(0.0), valid(false), saturated(false) {}
+    constexpr ControlOutput(double twr, double d, bool v = true, bool sat = false) 
+        : TWR(twr), delta(d), valid(v), saturated(sat) {}
 };
 
 class CascadeController {
 public:
     CascadeController(const RocketParams& rocket, const ControlParams& ctrl);
     
-    ControlOutput compute(const State& state) const;
+    ControlOutput compute(const State& state, double delta_prev) const;
     
     // Accessors for testing/debugging
     const RocketParams& getRocketParams() const { return rocket_; }
