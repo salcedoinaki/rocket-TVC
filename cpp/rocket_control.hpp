@@ -1,8 +1,13 @@
 #ifndef ROCKET_CONTROL_HPP
 #define ROCKET_CONTROL_HPP
 
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <cstdint>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 namespace rocket {
 
@@ -128,9 +133,14 @@ private:
 
 class Simulator {
 public:
-    static constexpr size_t MAX_STEPS = 100000;
+    static constexpr size_t MAX_STEPS = 50000;
     
     Simulator(const RocketParams& rocket, const ControlParams& ctrl, double dt = 0.001);
+    ~Simulator();
+    
+    // Disable copy (has heap-allocated data)
+    Simulator(const Simulator&) = delete;
+    Simulator& operator=(const Simulator&) = delete;
     
     struct Result {
         size_t num_steps;
@@ -156,9 +166,9 @@ private:
     CascadeController controller_;
     double dt_;
     
-    // Fixed-size arrays for embedded safety
-    State state_history_[MAX_STEPS];
-    ControlOutput control_history_[MAX_STEPS];
+    // Heap-allocated to avoid stack overflow
+    State* state_history_;
+    ControlOutput* control_history_;
     size_t history_length_;
 };
 

@@ -16,7 +16,7 @@ static int tests_failed = 0;
 #define TEST_ASSERT(cond, msg) \
     do { \
         if (!(cond)) { \
-            std::cerr << "FAIL: " << msg << " (line " << __LINE__ << ")\n"; \
+            std::cerr << "FAIL: " << msg << " (line " << __LINE__ << ")" << std::endl; \
             tests_failed++; \
             return false; \
         } \
@@ -27,12 +27,12 @@ static int tests_failed = 0;
 
 #define RUN_TEST(test_func) \
     do { \
-        std::cout << "Running " << #test_func << "... "; \
+        std::cout << "Running " << #test_func << "... " << std::flush; \
         if (test_func()) { \
-            std::cout << "PASS\n"; \
+            std::cout << "PASS" << std::endl; \
             tests_passed++; \
         } else { \
-            std::cout << "FAIL\n"; \
+            std::cout << "FAIL" << std::endl; \
         } \
     } while(0)
 

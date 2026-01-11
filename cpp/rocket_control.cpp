@@ -120,7 +120,15 @@ State RocketDynamics::step(const State& state, double TWR, double delta, double 
 // ============================================================================
 
 Simulator::Simulator(const RocketParams& rocket, const ControlParams& ctrl, double dt)
-    : dynamics_(rocket), controller_(rocket, ctrl), dt_(dt), history_length_(0) {}
+    : dynamics_(rocket), controller_(rocket, ctrl), dt_(dt), history_length_(0) {
+    state_history_ = new State[MAX_STEPS];
+    control_history_ = new ControlOutput[MAX_STEPS];
+}
+
+Simulator::~Simulator() {
+    delete[] state_history_;
+    delete[] control_history_;
+}
 
 Simulator::Result Simulator::runLanding(const State& initial_state, double max_time) {
     Result result = {};
