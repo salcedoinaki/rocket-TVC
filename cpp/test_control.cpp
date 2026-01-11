@@ -85,7 +85,7 @@ bool test_controller_hover() {
     
     // At target with zero velocity
     State state(0.0, 100.0, 0.0, 0.0, 0.0, 0.0);
-    ControlOutput out = controller.compute(state);
+    ControlOutput out = controller.compute(state, 0.0);
     
     TEST_ASSERT(out.valid, "Output should be valid");
     TEST_NEAR(out.delta, 0.0, 0.01, "Delta at hover");
@@ -101,10 +101,9 @@ bool test_controller_saturation() {
     
     // Large horizontal offset should saturate beta
     State state(1000.0, 100.0, 0.0, 0.0, 0.0, 0.0);
-    ControlOutput out = controller.compute(state);
+    ControlOutput out = controller.compute(state, 0.0);
     
     TEST_ASSERT(out.valid, "Output should be valid");
-    // Beta should be saturated to beta_max
     // delta should be within limits
     TEST_ASSERT(std::abs(out.delta) <= ctrl.delta_max + 1e-6, "Delta within limits");
     TEST_ASSERT(out.TWR >= ctrl.TWR_min - 1e-6, "TWR above min");
@@ -208,7 +207,7 @@ bool test_input_validation() {
     
     // NaN input should return invalid output
     State bad_state(std::nan(""), 100.0, 0.0, 0.0, 0.0, 0.0);
-    ControlOutput out = controller.compute(bad_state);
+    ControlOutput out = controller.compute(bad_state, 0.0);
     
     TEST_ASSERT(!out.valid, "NaN input should produce invalid output");
     return true;
