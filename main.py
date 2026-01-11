@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 class Params:
-    m = 200.0
+    m = 5000.0
     g = 9.81
     iota = 3.0
     Iyy = 750000
@@ -127,24 +127,6 @@ def test_gimbal_torque():
     ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
-
-
-def test_landing():
-    p = Params()
-    q0 = [0.0, 300.0, 0.0, 0.0, -50.0, 0.0]
-    
-    t, qh = simulate(q0, 0.0, 20.0, 0.01, 
-                     lambda t,q: 2.0*p.m*p.g if t > 2.0 else 0.0, 
-                     lambda t,q: 0.0, p, stop_on_ground=True)
-    
-    print(f"Landing: stopped at t={t[-1]:.2f}s, z={qh[-1,1]:.2f}m")
-    
-    plt.figure()
-    plt.plot(t, qh[:,1])
-    plt.xlabel('t [s]')
-    plt.ylabel('z [m]')
-    plt.title('Landing')
-    plt.axhline(0, color='r', linestyle='--')
 
 
 if __name__ == "__main__":
