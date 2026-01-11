@@ -6,7 +6,7 @@ class Params:
     m = 200.0
     g = 9.81
     iota = 3.0
-    Iyy = 120.0
+    Iyy = 750000
 
 
 def dynamics(t, q, F_T, delta, p):
@@ -102,16 +102,31 @@ def test_gimbal_torque():
     
     t, qh = simulate(q0, 0.0, 2.0, 0.001, lambda t,q: F_T, lambda t,q: delta, p, stop_on_ground=False)
     
-    expected = -(F_T * p.iota / p.Iyy) * np.sin(delta)
-    numeric = (qh[-1,5] - qh[0,5]) / (t[-1] - t[0])
+    w_dot = -(F_T * p.iota / p.Iyy) * np.sin(delta)
+    w_expected = w_dot * t
+    theta_expected = 0.5 * w_dot * t**2
     
-    print(f"Gimbal: expected={expected:.4f}, numeric={numeric:.4f} rad/s^2")
+    print(f"Gimbal: expected w_dot = {w_dot:.4f} rad/s^2")
     
-    plt.figure()
-    plt.plot(t, qh[:,5])
-    plt.xlabel('t [s]')
-    plt.ylabel('theta_dot [rad/s]')
-    plt.title('Gimbal Torque')
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 6))
+    
+    ax1.plot(t, qh[:,5], label='numeric')
+    ax1.plot(t, w_expected, '--', label='expected (linear)')
+    ax1.set_xlabel('t [s]')
+    ax1.set_ylabel('w [rad/s]')
+    ax1.set_title('Angular velocity')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    
+    ax2.plot(t, qh[:,2], label='numeric')
+    ax2.plot(t, theta_expected, '--', label='expected (parabolic)')
+    ax2.set_xlabel('t [s]')
+    ax2.set_ylabel('theta [rad]')
+    ax2.set_title('Pitch angle')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
 
 
 def test_landing():
