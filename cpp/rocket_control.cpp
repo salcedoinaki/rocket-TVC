@@ -15,12 +15,12 @@ double CascadeController::saturate(double value, double min_val, double max_val)
     return value;
 }
 
-ControlOutput CascadeController::compute(const State& state) const {
+ControlOutput CascadeController::compute(const State& state, double delta_prev) const {
     // Input validation
     if (!std::isfinite(state.x) || !std::isfinite(state.z) || 
         !std::isfinite(state.theta) || !std::isfinite(state.xdot) ||
         !std::isfinite(state.zdot) || !std::isfinite(state.thetadot)) {
-        return ControlOutput(1.0, 0.0, false);
+        return ControlOutput(1.0, 0.0, false, false);
     }
     
     const double W = rocket_.weight();
@@ -35,50 +35,45 @@ ControlOutput CascadeController::compute(const State& state) const {
     double zddot_des = ctrl_.KP_z * e_z + ctrl_.KD_z * e_zdot;
     
     // ========== Convert to thrust vector ==========
-    // F_x = m * xddot_des = F_T * sin(beta)
-    // F_z = m * (zddot_des + g) = F_T * cos(beta)
-    double F_x = rocket_.m * xddot_des;
-    double F_z = rocket_.m * (zddot_des + rocket_.g);
-    
-    double F_T = std::sqrt(F_x * F_x + F_z * F_z);
-    double beta = std::atan2(F_x, F_z);
-    
-    // Saturate beta
-    beta = saturate(beta, -ctrl_.beta_max, ctrl_.beta_max);
-    
-    // Recompute F_T with saturated beta to maintain vertical component
-    if (std::cos(beta) > 1e-6) {
-        F_T = F_z / std::cos(beta);
-    }
+    double accel_mag = std::sqrt(xddot_des * xddot_des + 
+                                 (zddot_des + rocket_.g) * (zddot_des + rocket_.g));
+    double F_T = rocket_.m * accel_mag;
     
     // Compute and saturate TWR
     double TWR = F_T / W;
     TWR = saturate(TWR, ctrl_.TWR_min, ctrl_.TWR_max);
     F_T = TWR * W;
     
+    // Thrust direction
+    double beta_des = std::atan2(xddot_des, zddot_des + rocket_.g);
+    beta_des = saturate(beta_des, -ctrl_.beta_max, ctrl_.beta_max);
+    
     // ========== INNER LOOP: Attitude control ==========
-    // Desired attitude tracks thrust vector direction
-    double theta_des = beta;
+    // Desired attitude (matches Python: theta_des = beta_des - delta_prev)
+    double theta_des = beta_des - delta_prev;
     double e_theta = theta_des - state.theta;
-    double e_thetadot = 0.0 - state.thetadot;
     
-    // Desired torque
-    double tau_des = ctrl_.KP_tau * e_theta + ctrl_.KD_tau * e_thetadot;
+    // Desired torque (matches Python: tau_des = KP*e_theta - KD*thetadot)
+    double tau_des = ctrl_.KP_tau * e_theta - ctrl_.KD_tau * state.thetadot;
     
-    // tau = -F_T * iota * sin(delta) => delta = -asin(tau / (F_T * iota))
-    double max_torque = F_T * rocket_.iota;
+    // Maximum available torque
+    double tau_max = rocket_.iota * F_T * std::sin(ctrl_.delta_max);
+    
+    // Check saturation
+    bool is_saturated = std::abs(tau_des) > tau_max;
+    
+    // Clip torque
+    double tau_clipped = saturate(tau_des, -tau_max, tau_max);
+    
+    // Compute delta from torque: tau = -F_T * iota * sin(delta)
     double delta = 0.0;
-    
-    if (max_torque > 1e-6) {
-        double sin_delta = -tau_des / max_torque;
-        sin_delta = saturate(sin_delta, -1.0, 1.0);
-        delta = std::asin(sin_delta);
+    if (F_T > 1e-6) {
+        double arg = tau_clipped / (rocket_.iota * F_T);
+        arg = saturate(arg, -1.0, 1.0);
+        delta = -std::asin(arg);
     }
     
-    // Saturate gimbal angle
-    delta = saturate(delta, -ctrl_.delta_max, ctrl_.delta_max);
-    
-    return ControlOutput(TWR, delta, true);
+    return ControlOutput(TWR, delta, true, is_saturated);
 }
 
 // ============================================================================
@@ -137,7 +132,7 @@ Simulator::Result Simulator::runLanding(const State& initial_state, double max_t
     State state = initial_state;
     size_t saturation_count = 0;
     double max_theta_error = 0.0;
-    const double delta_max = controller_.getControlParams().delta_max;
+    double delta_prev = 0.0;
     
     history_length_ = 0;
     size_t max_steps = static_cast<size_t>(max_time / dt_);
@@ -149,28 +144,27 @@ Simulator::Result Simulator::runLanding(const State& initial_state, double max_t
             state_history_[history_length_] = state;
         }
         
-        // Compute control
-        ControlOutput ctrl = controller_.compute(state);
+        // Compute control with previous delta
+        ControlOutput ctrl = controller_.compute(state, delta_prev);
         
         if (history_length_ < MAX_STEPS) {
             control_history_[history_length_] = ctrl;
             history_length_++;
         }
         
-        // Track saturation
-        if (std::abs(ctrl.delta) >= delta_max * 0.99) {
+        // Track saturation using the saturated flag
+        if (ctrl.saturated) {
             saturation_count++;
         }
         
-        // Track theta error
-        double theta_des = std::atan2(
-            std::sin(state.theta + ctrl.delta), 
-            std::cos(state.theta + ctrl.delta)
-        );
-        double e_theta = std::abs(theta_des - state.theta);
+        // Track theta error (theta_des = beta - delta_prev, but we approximate)
+        double e_theta = std::abs(state.theta);  // Simplified tracking
         if (e_theta > max_theta_error) {
             max_theta_error = e_theta;
         }
+        
+        // Update delta_prev for next iteration
+        delta_prev = ctrl.delta;
         
         // Step dynamics
         state = dynamics_.step(state, ctrl.TWR, ctrl.delta, dt_);
