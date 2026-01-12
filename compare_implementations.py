@@ -10,7 +10,7 @@ def run_comparison():
     cp = ControlParams()
     q0 = [20.0, 300.0, np.deg2rad(2), 5.0, -10.0, 0.0]
     
-    t_py, q_py, F_py, delta_py, _, _ = simulate_controlled(q0, 0, 50, 0.001, p, cp)
+    t_py, q_py, F_py, delta_py = simulate_controlled(q0, 0, 50, 0.001, p, cp)
     
     # Find landing index
     land_idx = np.where(q_py[:, 1] <= 0)[0]
@@ -34,57 +34,57 @@ def run_comparison():
         has_cpp = False
     
     # Create comparison figure
-    fig, axes = plt.subplots(3, 2, figsize=(14, 10))
-    fig.suptitle('Python vs C++ Implementation Comparison', fontsize=14, fontweight='bold')
+    fig, axes = plt.subplots(3, 2, figsize=(14, 12))
+    fig.suptitle('Python vs C++ Implementation Comparison', fontsize=14, fontweight='bold', y=0.98)
     
     # Colors
     py_color = '#2196F3'  # Blue
     cpp_color = '#FF5722'  # Orange
     
-    # 1. Trajectory (x vs z)
+    # 1. Trajectory (x vs z) - side view
     ax = axes[0, 0]
     ax.plot(q_py[:, 0], q_py[:, 1], color=py_color, linewidth=2, label='Python')
     if has_cpp:
         ax.plot(cpp_data['x'], cpp_data['z'], '--', color=cpp_color, linewidth=2, label='C++')
+    # Mark start and end
+    ax.plot(q_py[0, 0], q_py[0, 1], 'go', markersize=10, label='Start', zorder=5)
+    ax.plot(q_py[-1, 0], q_py[-1, 1], 'r^', markersize=10, label='Land', zorder=5)
+    ax.axhline(y=0, color='brown', linewidth=2, label='Ground')
     ax.set_xlabel('x [m]')
-    ax.set_ylabel('z [m]')
-    ax.set_title('Trajectory')
-    ax.legend()
+    ax.set_ylabel('Altitude z [m]')
+    ax.legend(loc='upper left', fontsize=8)
     ax.grid(True, alpha=0.3)
-    ax.set_xlim(-5, 25)
+    ax.set_ylim(-10, 320)
     
     # 2. Altitude vs time
     ax = axes[0, 1]
     ax.plot(t_py, q_py[:, 1], color=py_color, linewidth=2, label='Python')
     if has_cpp:
         ax.plot(cpp_data['t'], cpp_data['z'], '--', color=cpp_color, linewidth=2, label='C++')
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel('z [m]')
-    ax.set_title('Altitude')
+    ax.set_ylabel('Altitude z [m]')
     ax.legend()
     ax.grid(True, alpha=0.3)
+    ax.tick_params(labelbottom=False)
     
     # 3. Horizontal position vs time
     ax = axes[1, 0]
     ax.plot(t_py, q_py[:, 0], color=py_color, linewidth=2, label='Python')
     if has_cpp:
         ax.plot(cpp_data['t'], cpp_data['x'], '--', color=cpp_color, linewidth=2, label='C++')
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel('x [m]')
-    ax.set_title('Horizontal Position')
+    ax.set_ylabel('Position x [m]')
     ax.legend()
     ax.grid(True, alpha=0.3)
+    ax.tick_params(labelbottom=False)
     
     # 4. Pitch angle vs time
     ax = axes[1, 1]
     ax.plot(t_py, np.rad2deg(q_py[:, 2]), color=py_color, linewidth=2, label='Python')
     if has_cpp:
         ax.plot(cpp_data['t'], np.rad2deg(cpp_data['theta']), '--', color=cpp_color, linewidth=2, label='C++')
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel('θ [deg]')
-    ax.set_title('Pitch Angle')
+    ax.set_ylabel('Pitch θ [deg]')
     ax.legend()
     ax.grid(True, alpha=0.3)
+    ax.tick_params(labelbottom=False)
     
     # 5. Gimbal angle vs time
     ax = axes[2, 0]
@@ -94,8 +94,7 @@ def run_comparison():
     ax.axhline(y=10, color='r', linestyle=':', alpha=0.5, label='Limit')
     ax.axhline(y=-10, color='r', linestyle=':', alpha=0.5)
     ax.set_xlabel('Time [s]')
-    ax.set_ylabel('δ [deg]')
-    ax.set_title('Gimbal Angle')
+    ax.set_ylabel('Gimbal δ [deg]')
     ax.legend()
     ax.grid(True, alpha=0.3)
     
@@ -107,13 +106,11 @@ def run_comparison():
     ax.axhline(y=1.3, color='r', linestyle=':', alpha=0.5, label='Limit')
     ax.set_xlabel('Time [s]')
     ax.set_ylabel('TWR')
-    ax.set_title('Thrust-to-Weight Ratio')
     ax.legend()
     ax.grid(True, alpha=0.3)
     
-    plt.tight_layout()
-    plt.savefig('python_cpp_comparison.png', dpi=150, bbox_inches='tight')
-    print("Saved: python_cpp_comparison.png")
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.subplots_adjust(hspace=0.15, wspace=0.25)
     
     # Print numerical comparison
     print("\n" + "="*60)
@@ -151,6 +148,8 @@ def run_comparison():
     
     print("="*60)
     
+    plt.savefig('python_cpp_comparison.png', dpi=150, bbox_inches='tight')
+    print("\nSaved: python_cpp_comparison.png")
     plt.show()
 
 if __name__ == "__main__":
