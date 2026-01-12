@@ -6,9 +6,6 @@
 
 using namespace rocket;
 
-// ============================================================================
-// Test Framework (minimal, no external dependencies for embedded compatibility)
-// ============================================================================
 
 static int tests_passed = 0;
 static int tests_failed = 0;
@@ -35,10 +32,6 @@ static int tests_failed = 0;
             std::cout << "FAIL" << std::endl; \
         } \
     } while(0)
-
-// ============================================================================
-// Unit Tests
-// ============================================================================
 
 bool test_rocket_params() {
     RocketParams params;
@@ -231,10 +224,6 @@ bool test_deterministic_execution() {
     TEST_NEAR(r1.final_vz, r2.final_vz, 1e-10, "Deterministic final vz");
     return true;
 }
-
-// ============================================================================
-// Main
-// ============================================================================
 
 int main() {
     std::cout << "=== Rocket TVC Control C++ Unit Tests ===\n\n";

@@ -5,7 +5,6 @@ from control import ControlParams, simulate_controlled, run_landing
 from main import Params
 
 def run_comparison():
-    # Run Python simulation
     p = Params()
     cp = ControlParams()
     q0 = [20.0, 300.0, np.deg2rad(2), 5.0, -10.0, 0.0]

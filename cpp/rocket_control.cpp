@@ -2,10 +2,6 @@
 
 namespace rocket {
 
-// ============================================================================
-// CascadeController Implementation
-// ============================================================================
-
 CascadeController::CascadeController(const RocketParams& rocket, const ControlParams& ctrl)
     : rocket_(rocket), ctrl_(ctrl) {}
 
@@ -25,7 +21,7 @@ ControlOutput CascadeController::compute(const State& state, double delta_prev) 
     
     const double W = rocket_.weight();
     
-    // ========== OUTER LOOP: Position -> Desired accelerations ==========
+    // Outer loop
     double e_x = ctrl_.x_target - state.x;
     double e_xdot = ctrl_.xdot_target - state.xdot;
     double xddot_des = ctrl_.KP_x * e_x + ctrl_.KD_x * e_xdot;
@@ -34,7 +30,7 @@ ControlOutput CascadeController::compute(const State& state, double delta_prev) 
     double e_zdot = ctrl_.zdot_target - state.zdot;
     double zddot_des = ctrl_.KP_z * e_z + ctrl_.KD_z * e_zdot;
     
-    // ========== Convert to thrust vector ==========
+    // Thrust magnitude and direction
     double accel_mag = std::sqrt(xddot_des * xddot_des + 
                                  (zddot_des + rocket_.g) * (zddot_des + rocket_.g));
     double F_T = rocket_.m * accel_mag;
@@ -48,12 +44,9 @@ ControlOutput CascadeController::compute(const State& state, double delta_prev) 
     double beta_des = std::atan2(xddot_des, zddot_des + rocket_.g);
     beta_des = saturate(beta_des, -ctrl_.beta_max, ctrl_.beta_max);
     
-    // ========== INNER LOOP: Attitude control ==========
-    // Desired attitude (matches Python: theta_des = beta_des - delta_prev)
+    // Inner loop
     double theta_des = beta_des - delta_prev;
     double e_theta = theta_des - state.theta;
-    
-    // Desired torque (matches Python: tau_des = KP*e_theta - KD*thetadot)
     double tau_des = ctrl_.KP_tau * e_theta - ctrl_.KD_tau * state.thetadot;
     
     // Maximum available torque
@@ -75,10 +68,6 @@ ControlOutput CascadeController::compute(const State& state, double delta_prev) 
     
     return ControlOutput(TWR, delta, true, is_saturated);
 }
-
-// ============================================================================
-// RocketDynamics Implementation
-// ============================================================================
 
 RocketDynamics::RocketDynamics(const RocketParams& params)
     : params_(params) {}
@@ -109,10 +98,6 @@ State RocketDynamics::step(const State& state, double TWR, double delta, double 
     
     return next;
 }
-
-// ============================================================================
-// Simulator Implementation
-// ============================================================================
 
 Simulator::Simulator(const RocketParams& rocket, const ControlParams& ctrl, double dt)
     : dynamics_(rocket), controller_(rocket, ctrl), dt_(dt), history_length_(0) {

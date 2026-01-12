@@ -4,23 +4,14 @@ from main import Params, dynamics, simulate
 
 
 class ControlParams:
-    # Targets
     z_target = 0.0
     zdot_target = -2.0
     x_target = 0.0
     xdot_target = 0.0
     
-    # ============== GAIN CALCULATION ==============
-    # 
-    # INNER LOOP: ωn = 0.42 rad/s, ζ = 0.7
-    #   KP_tau = Iyy × ωn² = 750000 × 0.18 = 135000
-    #   KD_tau = 2×ζ×ωn×Iyy = 2×0.7×0.42×750000 = 440000
-    #
+    # Gains
     KP_tau = 1.35e5
     KD_tau = 4.4e5
-    
-    # OUTER LOOP: tuned for controlled descent
-    #
     KP_x = 0.014
     KD_x = 0.23
     KP_z = 0.020
@@ -36,7 +27,7 @@ class ControlParams:
 def cascade_controller(t, q, p, cp, delta_prev):
     x, z, theta, xdot, zdot, thetadot = q
     
-    # --- Outer loop: position/velocity -> desired acceleration ---
+    # Outer loop
     e_z = cp.z_target - z
     e_zdot = cp.zdot_target - zdot
     e_x = cp.x_target - x
@@ -58,7 +49,7 @@ def cascade_controller(t, q, p, cp, delta_prev):
     beta_des = np.arctan2(vdot_x_des, vdot_z_des + p.g)
     beta_des = np.clip(beta_des, -cp.beta_max, cp.beta_max)
     
-    # --- Inner loop: attitude -> gimbal angle ---
+    # Inner loop
     theta_des = beta_des - delta_prev
     
     e_theta = theta_des - theta
